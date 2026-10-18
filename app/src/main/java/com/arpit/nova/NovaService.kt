@@ -226,6 +226,9 @@ class NovaService : Service() {
                 else -> doIt(packageManager.getLaunchIntentForPackage(cmd.app.pkg!!), "${cmd.app.label} khul gaya, boss.")
             }
             is Cmd.Chat -> reply("Sorry boss, ye abhi mere bas ka nahi.")
+            is Cmd.WhatsApp -> reply("Sorry boss, WhatsApp abhi nahi.")
+            // Android doesn't let normal apps flip wifi/data, so one tap is left for you.
+            Cmd.NetOn -> doIt(Intent(Settings.Panel.ACTION_INTERNET_CONNECTIVITY), "Panel khol diya boss, bas ek tap karo.")
             is Cmd.Navigate -> if (cmd.place.isBlank()) run(Cmd.Open(App.MAPS)) else
                 doIt(Intent(Intent.ACTION_VIEW, Uri.parse("google.navigation:q=" + Uri.encode(cmd.place))), "Rasta shuru, boss. Drive safe!")
             is Cmd.StoreSearch -> if (cmd.query.isBlank()) run(Cmd.Open(App.PLAY_STORE)) else
