@@ -39,6 +39,8 @@ Needs JDK 17 and the Android SDK (platform 34).
 gradlew assembleRelease
 ```
 
+The offline wake-word model (55 MB) isn't in the repo. The first build downloads it automatically (`downloadVoskModel`, SHA-256 checked) into `app/src/main/assets/model-en-in`, so that one build needs internet. Nothing to install by hand.
+
 Release signing reads `keystore.properties` (git-ignored):
 
 ```
