@@ -206,7 +206,7 @@ class NovaService : Service() {
             !Settings.canDrawOverlays(this) -> end("Boss, pehle NOVA app mein display over other apps allow karo.")
             getSystemService(KeyguardManager::class.java).isKeyguardLocked && !cmd.safeWhenLocked() ->
                 end("Boss, pehle phone unlock karo.")
-            cmd.needsInternet() && !online() -> confirm("Boss, internet band hai. Khol dun?") { waitForInternet(cmd) }
+            cmd.needsInternet() && !online() -> waitForInternet(cmd)
             else -> try { run(cmd) } catch (e: SecurityException) {
                 end("Boss, iski permission nahi di hai. NOVA app khol ke permission do.")
             }
@@ -306,7 +306,7 @@ class NovaService : Service() {
 
     private fun waitForInternet(cmd: Cmd) {
         launch(Intent(Settings.Panel.ACTION_INTERNET_CONNECTIVITY))
-        reply("Internet on karo boss, on hote hi kaam ho jayega.")
+        end("Boss, net on kar do.")
         stopNetWait()
         val cb = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(n: Network) { main.post { if (netCb === this) { stopNetWait(); awake = true; run(cmd) } } }
