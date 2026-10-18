@@ -16,6 +16,7 @@ enum class App(val label: String, val pkg: String?, val online: Boolean, vararg 
 sealed interface Cmd {
     data class Alarm(val minOfDay: Int?) : Cmd
     data class Call(val name: String) : Cmd
+    data class WhatsApp(val name: String, val text: String) : Cmd
     data class Open(val app: App) : Cmd
     /** Anything that isn't a phone action: Claude answers it out loud. */
     data class Chat(val text: String) : Cmd
@@ -32,7 +33,7 @@ sealed interface Cmd {
 
 fun Cmd.needsInternet() = when (this) {
     is Cmd.Open -> app.online
-    is Cmd.Chat, is Cmd.Navigate, is Cmd.StoreSearch -> true
+    is Cmd.Chat, is Cmd.WhatsApp, is Cmd.Navigate, is Cmd.StoreSearch -> true
     else -> false
 }
 
@@ -69,6 +70,8 @@ object Brain {
         "likhlo", "take", "a", "write", "down", "yaad", "rakho", "rakh", "lena", "ki", "that", "ek", "1")
     private val CALL_FILL = setOf("hey", "nova", "call", "karo", "kar", "do", "kardo", "ko", "please", "phone", "lagao", "laga",
         "lagado", "dial", "to", "make", "a", "ek", "1", "zara", "jara", "abhi", "now", "plz")
+    private val WA_FILL = setOf("hey", "nova", "whatsapp", "pe", "par", "on", "message", "msg", "bhejo", "bhej", "send", "karo",
+        "kar", "do", "kardo", "ki", "that", "saying", "bolo", "ko", "to", "a", "please", "likho", "ke")
     private val EVENT_FILL = setOf("hey", "nova", "add", "bana", "banao", "banado", "daal", "daalo", "dalo", "create", "fix",
         "set", "rakh", "rakho", "laga", "lagao", "karo", "kar", "do", "kardo", "to", "my", "calendar", "mein", "me", "in",
         "a", "an", "kal", "aaj", "tomorrow", "today", "baje", "bje", "at", "ko", "ki", "ka", "please", "schedule", "event")
@@ -109,6 +112,8 @@ object Brain {
             has("ask", "pucho", "poocho", "puchho", "search", "dhoondo", "dhundo", "batao")
 
         return when {
+            // First: a message body can contain any other keyword ("ki main chup hun").
+            has("whatsapp", "whats app", "watsapp") -> whatsApp(" " + t.replace(Regex("whats app|watsapp"), "whatsapp") + " ", ::trim)
             has("shaant", "shant", "chup", "quiet", "silent", "disturb") -> Cmd.Quiet(duration(t))
             askAi -> Cmd.Chat(trim(app.names.fold(" $t ") { s, n -> s.replace(" $n ", " ") }.trim(), FILL))
             has("notes", "note") && has("padho", "padh", "read", "sunao", "suna", "batao", "show", "dikhao") -> Cmd.ReadNotes
@@ -143,6 +148,16 @@ object Brain {
             has("open", "kholo", "khol", "chalao", "launch") -> Cmd.Unknown
             else -> Cmd.Chat(trim(t, FILL).ifBlank { t })
         }
+    }
+
+    /** "sahil ko whatsapp karo ki kal milte hai" / "send kal milte hai to sahil on whatsapp" */
+    private fun whatsApp(s: String, trim: (String, Set<String>) -> String): Cmd.WhatsApp {
+        val en = Regex(" send (.+?) to ([a-z]+) ").find(s)
+        val name = en?.groupValues?.get(2) ?: Regex(" ([a-z]+) ko ").find(s)?.groupValues?.get(1)
+            ?: Regex(" (?:to|message|msg) ([a-z]+) ").find(s)?.groupValues?.get(1)
+        val msg = en?.groupValues?.get(1) ?: Regex(" (?:ki|that|saying|bolo) (.+)$").find(s)?.groupValues?.get(1)
+            ?: name?.let { s.substringAfter(" $it ko ", "") }.orEmpty()
+        return Cmd.WhatsApp(name?.takeUnless { it in WA_FILL }.orEmpty(), trim(msg.trim().replace("whatsapp", " ").trim(), WA_FILL))
     }
 
     /** (hour, minute, isPm or null if not said) */

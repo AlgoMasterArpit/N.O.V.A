@@ -37,6 +37,14 @@ class BrainTest {
         assertEquals(Cmd.Chat("aaj delhi ka weather kaisa hai"), p("aaj delhi ka weather kaisa hai"))
     }
 
+    @Test fun whatsApp() {
+        assertEquals(Cmd.WhatsApp("sahil", "kal milte hai"), p("Sahil ko WhatsApp karo ki kal milte hai"))
+        assertEquals(Cmd.WhatsApp("sahil", "kal milte hai"), p("send kal milte hai to sahil on whatsapp"))
+        assertEquals(Cmd.WhatsApp("sahil", "main late hun"), p("whatsapp pe sahil ko bhejo main late hun"))
+        assertEquals(Cmd.WhatsApp("mummy", "main chup hun"), p("mummy ko whatsapp message bhejo ki main chup hun"))
+        assertEquals(Cmd.WhatsApp("", ""), p("whatsapp message bhejo"))
+    }
+
     @Test fun lockedPhoneOnlyAlarms() {
         assertTrue(p("alarm 7 baje").safeWhenLocked())
         assertFalse(p("call sahil").safeWhenLocked())
