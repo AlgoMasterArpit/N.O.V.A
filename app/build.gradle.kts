@@ -33,6 +33,8 @@ android {
     buildTypes { release { signingConfig = signingConfigs.getByName("release") } }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = "17" }
+    // Jar metadata the SDK's dependencies all ship; the app doesn't need any of it.
+    packaging { resources.excludes += listOf("META-INF/DEPENDENCIES", "META-INF/LICENSE*", "META-INF/NOTICE*", "META-INF/INDEX.LIST") }
 }
 
 dependencies {
