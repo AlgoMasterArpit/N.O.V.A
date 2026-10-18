@@ -6,7 +6,6 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.app.SearchManager
 import android.app.Service
 import android.content.ActivityNotFoundException
 import android.content.ContentUris
@@ -226,12 +225,7 @@ class NovaService : Service() {
                 App.NOTES -> doIt(Intent(this, MainActivity::class.java), "Notes khul gaye, boss.")
                 else -> doIt(packageManager.getLaunchIntentForPackage(cmd.app.pkg!!), "${cmd.app.label} khul gaya, boss.")
             }
-            is Cmd.Ask -> when {
-                cmd.query.isBlank() -> run(Cmd.Open(cmd.app))
-                cmd.app == App.GOOGLE -> doIt(Intent(Intent.ACTION_WEB_SEARCH).putExtra(SearchManager.QUERY, cmd.query), "Google pe search kar diya, boss.")
-                else -> doIt(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, cmd.query)
-                    .setPackage(cmd.app.pkg), "${cmd.app.label} mein sawaal daal diya, boss.")
-            }
+            is Cmd.Chat -> reply("Sorry boss, ye abhi mere bas ka nahi.")
             is Cmd.Navigate -> if (cmd.place.isBlank()) run(Cmd.Open(App.MAPS)) else
                 doIt(Intent(Intent.ACTION_VIEW, Uri.parse("google.navigation:q=" + Uri.encode(cmd.place))), "Rasta shuru, boss. Drive safe!")
             is Cmd.StoreSearch -> if (cmd.query.isBlank()) run(Cmd.Open(App.PLAY_STORE)) else

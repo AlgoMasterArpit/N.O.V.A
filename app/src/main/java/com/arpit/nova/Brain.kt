@@ -17,7 +17,8 @@ sealed interface Cmd {
     data class Alarm(val minOfDay: Int?) : Cmd
     data class Call(val name: String) : Cmd
     data class Open(val app: App) : Cmd
-    data class Ask(val app: App, val query: String) : Cmd
+    /** Anything that isn't a phone action: Claude answers it out loud. */
+    data class Chat(val text: String) : Cmd
     data class Navigate(val place: String) : Cmd
     data class StoreSearch(val query: String) : Cmd
     data class Schedule(val tomorrow: Boolean) : Cmd
@@ -25,12 +26,13 @@ sealed interface Cmd {
     data class Note(val text: String) : Cmd
     data object ReadNotes : Cmd
     data class Quiet(val minutes: Int) : Cmd
+    /** "open youtube" etc: not on NOVA's allowed list. */
     data object Unknown : Cmd
 }
 
 fun Cmd.needsInternet() = when (this) {
     is Cmd.Open -> app.online
-    is Cmd.Ask, is Cmd.Navigate, is Cmd.StoreSearch -> true
+    is Cmd.Chat, is Cmd.Navigate, is Cmd.StoreSearch -> true
     else -> false
 }
 
@@ -108,7 +110,7 @@ object Brain {
 
         return when {
             has("shaant", "shant", "chup", "quiet", "silent", "disturb") -> Cmd.Quiet(duration(t))
-            askAi -> Cmd.Ask(app!!, trim(app.names.fold(" $t ") { s, n -> s.replace(" $n ", " ") }.trim(), FILL))
+            askAi -> Cmd.Chat(trim(app.names.fold(" $t ") { s, n -> s.replace(" $n ", " ") }.trim(), FILL))
             has("notes", "note") && has("padho", "padh", "read", "sunao", "suna", "batao", "show", "dikhao") -> Cmd.ReadNotes
             has("note", "likho", "likh", "likhlo", "yaad rakhna", "yaad rakho", "write down") -> Cmd.Note(trim(t, NOTE_FILL))
             has("alarm", "jagana", "jaga", "uthana", "utha dena", "wake me") ->
@@ -134,12 +136,12 @@ object Brain {
                     q.isBlank() -> Cmd.Open(app)
                     app == App.PLAY_STORE -> Cmd.StoreSearch(q)
                     app == App.MAPS -> Cmd.Navigate(trim(q, NAV_FILL))
-                    app.online -> Cmd.Ask(app, q)
+                    app.online -> Cmd.Chat(q)
                     else -> Cmd.Open(app)
                 }
             }
-            has("search", "dhoondo", "dhundo") -> Cmd.Ask(App.GOOGLE, trim(t, FILL))
-            else -> Cmd.Unknown
+            has("open", "kholo", "khol", "chalao", "launch") -> Cmd.Unknown
+            else -> Cmd.Chat(trim(t, FILL).ifBlank { t })
         }
     }
 

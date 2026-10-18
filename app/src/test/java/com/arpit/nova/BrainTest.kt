@@ -19,9 +19,9 @@ class BrainTest {
         assertEquals(Cmd.Call("sahil"), p("Sahil ko phone lagao"))
         assertEquals(Cmd.Quiet(120), p("listen nova agle do ghante shaant rehna"))
         assertEquals(Cmd.Quiet(60), p("chup ho jao"))
-        assertEquals(Cmd.Ask(App.CHATGPT, "photosynthesis kya hai"), p("ChatGPT se pucho photosynthesis kya hai"))
-        assertEquals(Cmd.Ask(App.CLAUDE, "plan my goa trip"), p("ask claude plan my goa trip"))
-        assertEquals(Cmd.Ask(App.GOOGLE, "weather"), p("google pe weather search karo"))
+        assertEquals(Cmd.Chat("photosynthesis kya hai"), p("ChatGPT se pucho photosynthesis kya hai"))
+        assertEquals(Cmd.Chat("plan my goa trip"), p("ask claude plan my goa trip"))
+        assertEquals(Cmd.Chat("weather"), p("google pe weather search karo"))
         assertEquals(Cmd.Open(App.GEMINI), p("gemini kholo"))
         assertEquals(Cmd.Open(App.CALENDAR), p("open calendar"))
         assertEquals(Cmd.Navigate("india gate"), p("navigate to india gate"))
@@ -34,6 +34,7 @@ class BrainTest {
         assertEquals(Cmd.Note("kal doodh lana hai"), p("note karo kal doodh lana hai"))
         assertEquals(Cmd.ReadNotes, p("mere notes padho"))
         assertEquals(Cmd.Unknown, p("open youtube"))
+        assertEquals(Cmd.Chat("aaj delhi ka weather kaisa hai"), p("aaj delhi ka weather kaisa hai"))
     }
 
     @Test fun lockedPhoneOnlyAlarms() {
