@@ -26,6 +26,7 @@ sealed interface Cmd {
     data class AddEvent(val title: String, val minOfDay: Int?, val tomorrow: Boolean) : Cmd
     data class Note(val text: String) : Cmd
     data object ReadNotes : Cmd
+    data object NetOn : Cmd
     data class Quiet(val minutes: Int) : Cmd
     /** "open youtube" etc: not on NOVA's allowed list. */
     data object Unknown : Cmd
@@ -113,9 +114,10 @@ object Brain {
 
         return when {
             // First: a message body can contain any other keyword ("ki main chup hun").
-            has("whatsapp", "whats app", "watsapp") -> whatsApp(" " + t.replace(Regex("whats app|watsapp"), "whatsapp") + " ", ::trim)
+            has("whatsapp", "whats app", "watsapp") && !has("play store", "playstore", "install", "download", "open", "kholo", "khol") -> whatsApp(" " + t.replace(Regex("whats app|watsapp"), "whatsapp") + " ", ::trim)
+            has("net", "internet", "wifi", "data") && has("on", "chalu", "khol", "kholo", "start", "enable", "chala") -> Cmd.NetOn
             has("shaant", "shant", "chup", "quiet", "silent", "disturb") -> Cmd.Quiet(duration(t))
-            askAi -> Cmd.Chat(trim(app.names.fold(" $t ") { s, n -> s.replace(" $n ", " ") }.trim(), FILL))
+            askAi -> Cmd.Chat(trim(app!!.names.fold(" $t ") { s, n -> s.replace(" $n ", " ") }.trim(), FILL))
             has("notes", "note") && has("padho", "padh", "read", "sunao", "suna", "batao", "show", "dikhao") -> Cmd.ReadNotes
             has("note", "likho", "likh", "likhlo", "yaad rakhna", "yaad rakho", "write down") -> Cmd.Note(trim(t, NOTE_FILL))
             has("alarm", "jagana", "jaga", "uthana", "utha dena", "wake me") ->
