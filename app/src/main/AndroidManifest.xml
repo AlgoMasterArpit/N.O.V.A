@@ -21,6 +21,7 @@
         <package android:name="com.anthropic.claude" />
         <package android:name="com.openai.chatgpt" />
         <package android:name="com.android.vending" />
+        <package android:name="com.whatsapp" />
         <package android:name="com.google.android.apps.maps" />
         <intent><action android:name="android.intent.action.TTS_SERVICE" /></intent>
         <intent><action android:name="android.speech.RecognitionService" /></intent>
@@ -42,5 +43,18 @@
             android:name=".NovaService"
             android:exported="false"
             android:foregroundServiceType="microphone" />
+        <!-- Only the system can bind this (BIND_ACCESSIBILITY_SERVICE), and only after you switch it on. -->
+        <service
+            android:name=".WhatsAppSender"
+            android:exported="true"
+            android:label="NOVA WhatsApp sender"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/whatsapp_sender" />
+        </service>
     </application>
 </manifest>
