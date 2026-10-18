@@ -33,6 +33,8 @@ class BrainTest {
         assertEquals(Cmd.AddEvent("ravi ke saath meeting", 17 * 60, true), p("kal 5 baje ravi ke saath meeting add karo"))
         assertEquals(Cmd.Note("kal doodh lana hai"), p("note karo kal doodh lana hai"))
         assertEquals(Cmd.ReadNotes, p("mere notes padho"))
+        assertEquals(Cmd.NetOn, p("net on kar do"))
+        assertEquals(Cmd.NetOn, p("turn on wifi"))
         assertEquals(Cmd.Unknown, p("open youtube"))
         assertEquals(Cmd.Chat("aaj delhi ka weather kaisa hai"), p("aaj delhi ka weather kaisa hai"))
     }
