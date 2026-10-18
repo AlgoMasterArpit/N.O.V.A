@@ -49,6 +49,7 @@ class NovaService : Service() {
         const val KILL = "kill"
         const val RESUME = "resume"
         const val REMIND_MIN = 5
+        const val CLAUDE_KEY = "claude_key"
         // Google TTS's British male voices, best first. Swap the order to taste.
         val JARVIS_VOICES = listOf("en-gb-x-rjs-local", "en-gb-x-gbd-local", "en-gb-x-gbb-local")
     }
@@ -67,6 +68,8 @@ class NovaService : Service() {
     private val announced = HashSet<String>()
     private val after = HashMap<String, () -> Unit>()
     private var utt = 0
+    private var claude: Claude? = null
+    private var chatGen = 0 // bumps on interrupt, so a late answer is dropped
 
     override fun onBind(i: Intent?) = null
 
@@ -152,6 +155,7 @@ class NovaService : Service() {
         tts.stop()
         after.clear()
         next = null
+        chatGen++
         stopWake()
         say("Haan boss?") { listen() }
     }
@@ -170,6 +174,7 @@ class NovaService : Service() {
     private fun sleep() {
         awake = false
         next = null
+        claude = null // next wake-up starts a fresh conversation
         startWake()
     }
 
@@ -251,7 +256,7 @@ class NovaService : Service() {
                 App.NOTES -> doIt(Intent(this, MainActivity::class.java), "Notes khul gaye, boss.")
                 else -> doIt(packageManager.getLaunchIntentForPackage(cmd.app.pkg!!), "${cmd.app.label} khul gaya, boss.")
             }
-            is Cmd.Chat -> reply("Sorry boss, ye abhi mere bas ka nahi.")
+            is Cmd.Chat -> chat(cmd.text)
             is Cmd.WhatsApp -> reply("Sorry boss, WhatsApp abhi nahi.")
             // Android doesn't let normal apps flip wifi/data, so one tap is left for you.
             Cmd.NetOn -> doIt(Intent(Settings.Panel.ACTION_INTERNET_CONNECTIVITY), "Panel khol diya boss, bas ek tap karo.")
@@ -294,6 +299,19 @@ class NovaService : Service() {
             }
             Cmd.Unknown -> reply("Sorry boss, ye abhi mere bas ka nahi.")
         }
+    }
+
+    /** Ask Claude; the answer is read out and NOVA keeps listening for a cross-question. */
+    private fun chat(q: String) {
+        val key = getSharedPreferences("nova", MODE_PRIVATE).getString(CLAUDE_KEY, null)
+        if (key.isNullOrBlank()) return end("Boss, pehle NOVA app mein Claude API key daalo.")
+        val c = claude ?: Claude(key).also { claude = it }
+        val gen = ++chatGen
+        say("Ek second, boss.")
+        Thread {
+            val answer = c.ask(q)
+            main.post { if (gen == chatGen && awake) reply(answer) }
+        }.start()
     }
 
     private fun doIt(i: Intent?, doneMsg: String, more: Boolean = true) {
