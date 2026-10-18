@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="wa_sender_desc">Lets NOVA tap Send in WhatsApp, only right after you said "haan" to a message. It sees nothing outside WhatsApp.</string>
+</resources>
