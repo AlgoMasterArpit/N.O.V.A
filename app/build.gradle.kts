@@ -1,3 +1,4 @@
+import java.security.MessageDigest
 import java.util.Properties
 
 plugins {
@@ -36,6 +37,27 @@ android {
     // Jar metadata the SDK's dependencies all ship; the app doesn't need any of it.
     packaging { resources.excludes += listOf("META-INF/DEPENDENCIES", "META-INF/LICENSE*", "META-INF/NOTICE*", "META-INF/INDEX.LIST") }
 }
+
+// The 55 MB offline wake-word model is too big to push, so the first build downloads it (checksum-verified).
+val voskModel = tasks.register("downloadVoskModel") {
+    val dir = file("src/main/assets/model-en-in")
+    outputs.dir(dir)
+    onlyIf { !dir.resolve("uuid").exists() }
+    doLast {
+        val zip = layout.buildDirectory.file("vosk-model.zip").get().asFile.apply { parentFile.mkdirs() }
+        uri("https://alphacephei.com/vosk/models/vosk-model-small-en-in-0.4.zip").toURL().openStream()
+            .use { input -> zip.outputStream().use { input.copyTo(it) } }
+        val sha = MessageDigest.getInstance("SHA-256").digest(zip.readBytes()).joinToString("") { "%02x".format(it) }
+        check(sha == "20663dcac4d5cb783a579c54d98339344a688e4ec6e1b4a4b059fd1235454cc7") { "Vosk model checksum mismatch: $sha" }
+        copy {
+            from(zipTree(zip)) { eachFile { path = path.substringAfter('/') } }
+            includeEmptyDirs = false
+            into(dir)
+        }
+        dir.resolve("uuid").writeText("nova-en-in-0.4\n")
+    }
+}
+tasks.named("preBuild") { dependsOn(voskModel) }
 
 dependencies {
     implementation("com.alphacephei:vosk-android:0.3.47@aar")
