@@ -51,6 +51,8 @@ class NovaService : Service() {
         const val KILL = "kill"
         const val RESUME = "resume"
         const val REMIND_MIN = 5
+        // Google TTS's British male voices, best first. Swap the order to taste.
+        val JARVIS_VOICES = listOf("en-gb-x-rjs-local", "en-gb-x-gbd-local", "en-gb-x-gbb-local")
     }
 
     private val main = Handler(Looper.getMainLooper())
@@ -76,7 +78,9 @@ class NovaService : Service() {
             .createNotificationChannel(NotificationChannel("nova", "NOVA", NotificationManager.IMPORTANCE_LOW))
         startForeground(1, notification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
 
-        tts = TextToSpeech(this) { if (it == TextToSpeech.SUCCESS) tts.language = Locale("en", "IN") }
+        val google = "com.google.android.tts"
+        val engine = google.takeIf { runCatching { packageManager.getPackageInfo(it, 0) }.isSuccess }
+        tts = TextToSpeech(this, { if (it == TextToSpeech.SUCCESS) jarvisVoice() }, engine)
         tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(id: String) {}
             override fun onDone(id: String) { main.post { after.remove(id)?.invoke() } }
@@ -164,6 +168,15 @@ class NovaService : Service() {
     private fun done() { busy = false; startWake() }
 
     // ---- speaking ----
+
+    /** British male, offline, a bit slow and deep: as close to JARVIS as the phone's own voices get. */
+    private fun jarvisVoice() {
+        val offlineGb = tts.voices.orEmpty().filter { it.locale == Locale.UK && !it.isNetworkConnectionRequired }
+        tts.voice = JARVIS_VOICES.firstNotNullOfOrNull { n -> offlineGb.firstOrNull { it.name == n } }
+            ?: offlineGb.firstOrNull() ?: tts.defaultVoice
+        tts.setPitch(0.9f)
+        tts.setSpeechRate(0.95f)
+    }
 
     private fun say(text: String, then: () -> Unit = {}) {
         val id = "u${utt++}"
