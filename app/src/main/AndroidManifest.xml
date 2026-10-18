@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.CALL_PHONE" />
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
+    <!-- NOVA never gets internet, even if a library asks for it: nothing can leave the phone from this app. -->
+    <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
+
+    <queries>
+        <package android:name="com.google.android.googlequicksearchbox" />
+        <package android:name="com.google.android.apps.bard" />
+        <package android:name="com.anthropic.claude" />
+        <package android:name="com.openai.chatgpt" />
+        <package android:name="com.android.vending" />
+        <package android:name="com.google.android.apps.maps" />
+        <intent><action android:name="android.intent.action.TTS_SERVICE" /></intent>
+        <intent><action android:name="android.speech.RecognitionService" /></intent>
+    </queries>
+
+    <application
+        android:label="N.O.V.A"
+        android:icon="@android:drawable/ic_btn_speak_now"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/no_backup"
+        android:theme="@android:style/Theme.DeviceDefault">
+        <activity android:name=".MainActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <service
+            android:name=".NovaService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+    </application>
+</manifest>
