@@ -91,7 +91,9 @@ class NovaService : Service() {
             override fun onResults(b: Bundle) {
                 val text = b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
                 listening = false
-                if (text.isNullOrBlank()) sleep() else handle(text)
+                if (text.isNullOrBlank()) return sleep()
+                startWake() // so "Nova..." can cut in while it works or talks
+                handle(text)
             }
             override fun onError(e: Int) { listening = false; sleep() } // silence: nothing left to do
             override fun onReadyForSpeech(p: Bundle?) {}
@@ -146,6 +148,10 @@ class NovaService : Service() {
     private fun heard() {
         if (listening) return
         awake = true
+        // Barge-in: stop talking right away and drop whatever was queued.
+        tts.stop()
+        after.clear()
+        next = null
         stopWake()
         say("Haan boss?") { listen() }
     }
@@ -181,7 +187,9 @@ class NovaService : Service() {
     private fun say(text: String, then: () -> Unit = {}) {
         val id = "u${utt++}"
         after[id] = then
-        if (tts.speak(text, TextToSpeech.QUEUE_ADD, null, id) != TextToSpeech.SUCCESS) after.remove(id)?.invoke()
+        // Never say its own name, or the wake loop would hear itself and interrupt.
+        val clean = text.replace(Regex("(?i)\bnova\b"), "")
+        if (tts.speak(clean, TextToSpeech.QUEUE_ADD, null, id) != TextToSpeech.SUCCESS) after.remove(id)?.invoke()
     }
 
     /** Task finished: report it, ask for more, keep listening (silence or "nahi" = sleep). */
