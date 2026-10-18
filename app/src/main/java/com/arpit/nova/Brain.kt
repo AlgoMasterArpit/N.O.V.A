@@ -87,6 +87,14 @@ object Brain {
         return w.none { it in NO } && w.any { it in YES }
     }
 
+    private val DONE = setOf("nahi", "nahin", "no", "nope", "nothing", "bas", "thanks", "thank", "shukriya", "sleep", "so", "done")
+
+    /** "Aur kuch, boss?" -> "nahi" / "bas" / "thank you" / "so jao" means go back to sleep. */
+    fun isDone(raw: String): Boolean {
+        val w = normalize(raw).split(" ").filter { it.isNotEmpty() }
+        return w.isNotEmpty() && w.size <= 4 && w.any { it in DONE }
+    }
+
     fun parse(raw: String, nowMin: Int): Cmd {
         val t = normalize(raw)
         val w = t.split(" ").toSet()

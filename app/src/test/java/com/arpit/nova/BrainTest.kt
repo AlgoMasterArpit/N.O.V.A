@@ -43,6 +43,14 @@ class BrainTest {
         assertFalse(p("mere notes padho").safeWhenLocked())
     }
 
+    @Test fun done() {
+        assertTrue(Brain.isDone("nahi boss"))
+        assertTrue(Brain.isDone("bas thank you"))
+        assertTrue(Brain.isDone("so jao"))
+        assertFalse(Brain.isDone("call sahil"))
+        assertFalse(Brain.isDone("no i want to know the weather in delhi today"))
+    }
+
     @Test fun yesNo() {
         assertTrue(Brain.isYes("haan kar do"))
         assertTrue(Brain.isYes("ok"))
