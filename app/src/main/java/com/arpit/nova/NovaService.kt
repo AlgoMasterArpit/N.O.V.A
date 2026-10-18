@@ -106,7 +106,7 @@ class NovaService : Service() {
         StorageService.unpack(this, "model-en-in", "model", { m ->
             main.post {
                 model = m
-                rec = Recognizer(m, 16000f, """["nova", "[unk]"]""")
+                rec = Recognizer(m, 16000f, """["nova", "wake up", "[unk]"]""")
                 startWake()
                 remindLoop()
             }
@@ -140,7 +140,7 @@ class NovaService : Service() {
         if (wake != null || busy || System.currentTimeMillis() < quietUntil) return
         wake = SpeechService(r, 16000f).also {
             it.startListening(object : VoskListener {
-                override fun onResult(h: String) { if ("nova" in h) main.post { heard() } }
+                override fun onResult(h: String) { if ("nova" in h || "wake up" in h) main.post { heard() } }
                 override fun onPartialResult(h: String) {}
                 override fun onFinalResult(h: String) {}
                 override fun onError(e: Exception) { Log.e("NOVA", "wake", e) }
