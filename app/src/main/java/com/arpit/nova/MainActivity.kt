@@ -51,6 +51,7 @@ class MainActivity : Activity() {
             key.text.clear()
             refresh()
         }
+        btn("4. Turn on WhatsApp sender") { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
         btn("WAKE NOVA") {
             if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
                 startForegroundService(Intent(this, NovaService::class.java))
@@ -77,6 +78,8 @@ class MainActivity : Activity() {
             appendLine(if (Settings.canDrawOverlays(this@MainActivity)) "✅ Can open apps" else "❌ Allow display over other apps")
             val hasKey = !getSharedPreferences("nova", MODE_PRIVATE).getString(NovaService.CLAUDE_KEY, null).isNullOrBlank()
             appendLine(if (hasKey) "✅ Claude key saved" else "❌ Add a Claude key to ask questions")
+            val sender = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES).orEmpty()
+            appendLine(if ("$packageName/" in sender) "✅ WhatsApp sender on" else "❌ WhatsApp sender off")
             appendLine("🔒 Only your questions go online, and only to Claude.")
         }
         notes.text = "Notes:\n" + File(filesDir, "notes.txt").takeIf { it.exists() }?.readText().orEmpty()
