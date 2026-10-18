@@ -13,6 +13,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.graphics.drawable.Icon
+import android.media.AudioAttributes
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
@@ -185,6 +186,11 @@ class NovaService : Service() {
         val offlineGb = tts.voices.orEmpty().filter { it.locale == Locale.UK && !it.isNetworkConnectionRequired }
         tts.voice = JARVIS_VOICES.firstNotNullOfOrNull { n -> offlineGb.firstOrNull { it.name == n } }
             ?: offlineGb.firstOrNull() ?: tts.defaultVoice
+        // Assistant speech follows the phone's media volume: volume up/down = NOVA louder/softer.
+        tts.setAudioAttributes(AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_ASSISTANT)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+            .build())
         tts.setPitch(0.9f)
         tts.setSpeechRate(0.95f)
     }
