@@ -3,3 +3,5 @@ build/
 local.properties
 keystore.properties
 *.jks
+# voice model (55 MB): pushed separately later
+app/src/main/assets/model-en-in/
