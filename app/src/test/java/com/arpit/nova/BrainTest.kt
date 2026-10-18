@@ -11,7 +11,7 @@ class BrainTest {
 
     @Test fun commands() {
         assertEquals(Cmd.Alarm(7 * 60), p("hey nova subah 7 baje ka alarm laga do"))
-        assertEquals(Cmd.Alarm(7 * 60 + 30), p("saade saat baje alarm"))
+        assertEquals(Cmd.Alarm(19 * 60 + 30), p("saade saat baje alarm"))  // 10am now -> next 7:30 is pm
         assertEquals(Cmd.Alarm(17 * 60), p("set alarm for 5"))           // 10am now -> 5pm is next
         assertEquals(Cmd.Alarm(6 * 60 + 15), p("wake me at 6.15 a.m."))
         assertEquals(Cmd.Alarm(null), p("alarm laga do"))
