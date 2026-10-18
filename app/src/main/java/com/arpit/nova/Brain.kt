@@ -34,8 +34,8 @@ fun Cmd.needsInternet() = when (this) {
     else -> false
 }
 
-// Someone else talking to your locked phone can only set alarms or quiet NOVA.
-fun Cmd.safeWhenLocked() = this is Cmd.Alarm || this is Cmd.Quiet || this is Cmd.Unknown
+// Someone else talking to your locked phone can only set alarms.
+fun Cmd.safeWhenLocked() = this is Cmd.Alarm
 
 // ponytail: keyword rules, not an LLM. Keeps everything offline; add phrases here when NOVA mishears you.
 object Brain {

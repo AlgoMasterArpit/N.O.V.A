@@ -36,6 +36,13 @@ class BrainTest {
         assertEquals(Cmd.Unknown, p("open youtube"))
     }
 
+    @Test fun lockedPhoneOnlyAlarms() {
+        assertTrue(p("alarm 7 baje").safeWhenLocked())
+        assertFalse(p("call sahil").safeWhenLocked())
+        assertFalse(p("chup ho jao").safeWhenLocked())
+        assertFalse(p("mere notes padho").safeWhenLocked())
+    }
+
     @Test fun yesNo() {
         assertTrue(Brain.isYes("haan kar do"))
         assertTrue(Brain.isYes("ok"))
