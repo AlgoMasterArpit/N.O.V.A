@@ -188,7 +188,7 @@ class NovaService : Service() {
         val id = "u${utt++}"
         after[id] = then
         // Never say its own name, or the wake loop would hear itself and interrupt.
-        val clean = text.replace(Regex("(?i)\bnova\b"), "")
+        val clean = text.replace(Regex("(?i)\\bnova\\b"), "")
         if (tts.speak(clean, TextToSpeech.QUEUE_ADD, null, id) != TextToSpeech.SUCCESS) after.remove(id)?.invoke()
     }
 
