@@ -13,8 +13,13 @@ import kotlin.math.sqrt
  */
 class WakeWord(private val rec: Recognizer, private val onWake: () -> Unit) : Thread("nova-wake") {
     companion object {
-        // ponytail: fixed loudness gate. Raise it if background noise keeps it decoding, lower it if it misses you.
-        const val LOUDNESS = 500.0
+        // The gate opens for anything SNR times louder than the room's background noise (3x is about +10 dB),
+        // so a quiet room hears you from far away and a noisy room doesn't burn battery.
+        // ponytail: lower SNR (e.g. 2.0) for more range, raise it if it wakes on random noise.
+        const val SNR = 3.0
+        const val MIN_LOUDNESS = 40.0 // floor so pure silence doesn't open the gate
+        private const val LEARN_QUIET = 0.05 // learn room noise fast while it's quiet
+        private const val LEARN_LOUD = 0.005 // and slowly during constant noise (TV, fan)
         private const val RATE = 16000
         private const val CHUNK = RATE / 10 // 100 ms
         private const val HANG = 10 // keep decoding 1 s after the voice stops
@@ -36,13 +41,17 @@ class WakeWord(private val rec: Recognizer, private val onWake: () -> Unit) : Th
         val prev = ShortArray(CHUNK)
         var prevN = 0
         var hang = 0
+        var noise = 100.0 // running estimate of the room's background level
         rec.reset()
         ar.startRecording()
         try {
             while (on) {
                 val n = ar.read(buf, 0, CHUNK)
                 if (n <= 0) continue
-                if (rms(buf, n) > LOUDNESS) {
+                val level = rms(buf, n)
+                val loud = level > maxOf(MIN_LOUDNESS, noise * SNR)
+                noise += (level - noise) * (if (loud) LEARN_LOUD else LEARN_QUIET)
+                if (loud) {
                     if (hang == 0 && prevN > 0) rec.acceptWaveForm(prev, prevN) // the word's soft start
                     hang = HANG
                 }
