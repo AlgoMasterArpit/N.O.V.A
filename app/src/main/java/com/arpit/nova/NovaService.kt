@@ -32,14 +32,12 @@ import android.speech.tts.UtteranceProgressListener
 import android.util.Log
 import org.vosk.Model
 import org.vosk.Recognizer
-import org.vosk.android.SpeechService
 import org.vosk.android.StorageService
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-import org.vosk.android.RecognitionListener as VoskListener
 
 /**
  * Alive = this service runs. Killed = it doesn't (mic released, nothing scheduled).
@@ -60,7 +58,7 @@ class NovaService : Service() {
     private lateinit var ears: SpeechRecognizer
     private var model: Model? = null
     private var rec: Recognizer? = null
-    private var wake: SpeechService? = null
+    private var wake: WakeWord? = null
     private var busy = false
     private var next: ((String) -> Unit)? = null
     private var quietUntil = 0L
@@ -138,18 +136,10 @@ class NovaService : Service() {
     private fun startWake() {
         val r = rec ?: return
         if (wake != null || busy || System.currentTimeMillis() < quietUntil) return
-        wake = SpeechService(r, 16000f).also {
-            it.startListening(object : VoskListener {
-                override fun onResult(h: String) { if ("nova" in h || "wake up" in h) main.post { heard() } }
-                override fun onPartialResult(h: String) {}
-                override fun onFinalResult(h: String) {}
-                override fun onError(e: Exception) { Log.e("NOVA", "wake", e) }
-                override fun onTimeout() {}
-            })
-        }
+        wake = WakeWord(r) { main.post { heard() } }.also { it.start() }
     }
 
-    private fun stopWake() { wake?.shutdown(); wake = null }
+    private fun stopWake() { wake?.quit(); wake = null }
 
     private fun heard() {
         if (busy) return
