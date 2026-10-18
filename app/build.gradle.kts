@@ -16,6 +16,7 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
+        ndk { abiFilters += "arm64-v8a" } // all modern Samsung/Pixel/Moto phones
     }
     // Release build (not debuggable) so nobody can pull NOVA's notes off the phone over USB.
     signingConfigs {
