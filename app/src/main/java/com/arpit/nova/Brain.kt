@@ -99,7 +99,7 @@ object Brain {
             has("ask", "pucho", "poocho", "puchho", "search", "dhoondo", "dhundo", "batao")
 
         return when {
-            has("shaant", "shant", "chup", "quiet", "silent", "disturb", "so jao") -> Cmd.Quiet(duration(t))
+            has("shaant", "shant", "chup", "quiet", "silent", "disturb") -> Cmd.Quiet(duration(t))
             askAi -> Cmd.Ask(app!!, trim(app.names.fold(" $t ") { s, n -> s.replace(" $n ", " ") }.trim(), FILL))
             has("notes", "note") && has("padho", "padh", "read", "sunao", "suna", "batao", "show", "dikhao") -> Cmd.ReadNotes
             has("note", "likho", "likh", "likhlo", "yaad rakhna", "yaad rakho", "write down") -> Cmd.Note(trim(t, NOTE_FILL))
