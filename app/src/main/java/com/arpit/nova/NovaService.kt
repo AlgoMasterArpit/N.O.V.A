@@ -59,7 +59,8 @@ class NovaService : Service() {
     private var model: Model? = null
     private var rec: Recognizer? = null
     private var wake: WakeWord? = null
-    private var busy = false
+    private var awake = false // in a conversation (between "wake up" and going back to sleep)
+    private var listening = false
     private var next: ((String) -> Unit)? = null
     private var quietUntil = 0L
     private var netCb: ConnectivityManager.NetworkCallback? = null
@@ -89,9 +90,10 @@ class NovaService : Service() {
         ears.setRecognitionListener(object : RecognitionListener {
             override fun onResults(b: Bundle) {
                 val text = b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
-                if (text.isNullOrBlank()) { next = null; done() } else handle(text)
+                listening = false
+                if (text.isNullOrBlank()) sleep() else handle(text)
             }
-            override fun onError(e: Int) { next = null; done() }
+            override fun onError(e: Int) { listening = false; sleep() } // silence: nothing left to do
             override fun onReadyForSpeech(p: Bundle?) {}
             override fun onBeginningOfSpeech() {}
             override fun onRmsChanged(v: Float) {}
@@ -135,27 +137,35 @@ class NovaService : Service() {
 
     private fun startWake() {
         val r = rec ?: return
-        if (wake != null || busy || System.currentTimeMillis() < quietUntil) return
+        if (wake != null || listening || System.currentTimeMillis() < quietUntil) return
         wake = WakeWord(r) { main.post { heard() } }.also { it.start() }
     }
 
     private fun stopWake() { wake?.quit(); wake = null }
 
     private fun heard() {
-        if (busy) return
-        busy = true
+        if (listening) return
+        awake = true
         stopWake()
         say("Haan boss?") { listen() }
     }
 
-    private fun listen() = ears.startListening(
+    private fun listen() {
+        listening = true
+        stopWake()
+        ears.startListening(
         Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-IN")
-            .putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
-    )
+            .putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true))
+    }
 
-    private fun done() { busy = false; startWake() }
+    /** Back to sleep mode: only the cheap wake-word loop runs. */
+    private fun sleep() {
+        awake = false
+        next = null
+        startWake()
+    }
 
     // ---- speaking ----
 
@@ -174,7 +184,11 @@ class NovaService : Service() {
         if (tts.speak(text, TextToSpeech.QUEUE_ADD, null, id) != TextToSpeech.SUCCESS) after.remove(id)?.invoke()
     }
 
-    private fun reply(text: String) = say(text) { done() }
+    /** Task finished: report it, ask for more, keep listening (silence or "nahi" = sleep). */
+    private fun reply(text: String) = say("$text Aur kuch, boss?") { listen() }
+
+    /** Say it and go back to sleep without asking for more. */
+    private fun end(text: String) = say(text) { sleep() }
 
     /** Ask something and hand the spoken answer to [f] (no "hey nova" needed). */
     private fun prompt(q: String, f: (String) -> Unit) { next = f; say(q) { listen() } }
@@ -186,14 +200,15 @@ class NovaService : Service() {
 
     private fun handle(text: String) {
         next?.let { f -> next = null; return f(text) }
+        if (Brain.isDone(text)) return end("Okie boss.")
         val cmd = Brain.parse(text, nowMin())
         when {
-            !Settings.canDrawOverlays(this) -> reply("Boss, pehle NOVA app mein display over other apps allow karo.")
+            !Settings.canDrawOverlays(this) -> end("Boss, pehle NOVA app mein display over other apps allow karo.")
             getSystemService(KeyguardManager::class.java).isKeyguardLocked && !cmd.safeWhenLocked() ->
-                reply("Boss, pehle phone unlock karo.")
+                end("Boss, pehle phone unlock karo.")
             cmd.needsInternet() && !online() -> confirm("Boss, internet band hai. Khol dun?") { waitForInternet(cmd) }
             else -> try { run(cmd) } catch (e: SecurityException) {
-                reply("Boss, iski permission nahi di hai. NOVA app khol ke permission do.")
+                end("Boss, iski permission nahi di hai. NOVA app khol ke permission do.")
             }
         }
     }
@@ -217,7 +232,7 @@ class NovaService : Service() {
                     else -> {
                         val (name, num) = hits.entries.first()
                         confirm("$name ko call karun, boss?") {
-                            doIt(Intent(Intent.ACTION_CALL, Uri.fromParts("tel", num, null)), "Calling $name, boss.")
+                            doIt(Intent(Intent.ACTION_CALL, Uri.fromParts("tel", num, null)), "Calling $name, boss.", more = false)
                         }
                     }
                 }
@@ -267,15 +282,16 @@ class NovaService : Service() {
                 stopWake()
                 refresh()
                 main.postDelayed({ if (System.currentTimeMillis() >= quietUntil) { quietUntil = 0; refresh(); startWake() } }, cmd.minutes * 60_000L)
-                reply("Okie boss, ${clock(quietUntil)} tak chup.")
+                end("Okie boss, ${clock(quietUntil)} tak chup.")
             }
             Cmd.Unknown -> reply("Sorry boss, ye abhi mere bas ka nahi.")
         }
     }
 
-    private fun doIt(i: Intent?, doneMsg: String) {
+    private fun doIt(i: Intent?, doneMsg: String, more: Boolean = true) {
         say("Okie boss.")
-        reply(if (i != null && launch(i)) doneMsg else "Boss, iske liye app phone mein nahi mila.")
+        val msg = if (i != null && launch(i)) doneMsg else "Boss, iske liye app phone mein nahi mila."
+        if (more) reply(msg) else end(msg)
     }
 
     private fun launch(i: Intent) = try {
@@ -293,7 +309,7 @@ class NovaService : Service() {
         reply("Internet on karo boss, on hote hi kaam ho jayega.")
         stopNetWait()
         val cb = object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(n: Network) { main.post { if (netCb === this) { stopNetWait(); busy = true; stopWake(); run(cmd) } } }
+            override fun onAvailable(n: Network) { main.post { if (netCb === this) { stopNetWait(); awake = true; run(cmd) } } }
         }
         netCb = cb
         getSystemService(ConnectivityManager::class.java).registerDefaultNetworkCallback(cb)
@@ -331,7 +347,7 @@ class NovaService : Service() {
 
     // ponytail: polls every minute while the mic loop keeps the CPU awake; switch to AlarmManager if reminders arrive late.
     private fun remindLoop() {
-        if (!busy && wake != null) {
+        if (!awake && wake != null) {
             val now = System.currentTimeMillis()
             for (e in events(now, now + REMIND_MIN * 60_000L)) {
                 if (e.begin < now || !announced.add(e.key)) continue
