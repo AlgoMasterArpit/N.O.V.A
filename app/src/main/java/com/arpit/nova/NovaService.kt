@@ -257,7 +257,21 @@ class NovaService : Service() {
                 else -> doIt(packageManager.getLaunchIntentForPackage(cmd.app.pkg!!), "${cmd.app.label} khul gaya, boss.")
             }
             is Cmd.Chat -> chat(cmd.text)
-            is Cmd.WhatsApp -> reply("Sorry boss, WhatsApp abhi nahi.")
+            is Cmd.WhatsApp -> when {
+                cmd.name.isBlank() -> prompt("Kisko bhejun, boss?") { run(cmd.copy(name = Brain.normalize(it))) }
+                cmd.text.isBlank() -> prompt("Kya message bhejun, boss?") { run(cmd.copy(text = it)) }
+                else -> {
+                    val hits = contacts(cmd.name)
+                    when {
+                        hits.isEmpty() -> reply("Boss, contacts mein ${cmd.name} nahi mila.")
+                        hits.size > 1 -> reply("Boss, ${hits.size} log mile: ${hits.keys.take(3).joinToString(", ")}. Pura naam bolo.")
+                        else -> {
+                            val (name, num) = hits.entries.first()
+                            confirm("$name ko WhatsApp pe bhejun: ${cmd.text}?") { sendWhatsApp(name, num, cmd.text) }
+                        }
+                    }
+                }
+            }
             // Android doesn't let normal apps flip wifi/data, so one tap is left for you.
             Cmd.NetOn -> doIt(Intent(Settings.Panel.ACTION_INTERNET_CONNECTIVITY), "Panel khol diya boss, bas ek tap karo.")
             is Cmd.Navigate -> if (cmd.place.isBlank()) run(Cmd.Open(App.MAPS)) else
@@ -312,6 +326,19 @@ class NovaService : Service() {
             val answer = c.ask(q)
             main.post { if (gen == chatGen && awake) reply(answer) }
         }.start()
+    }
+
+    private fun sendWhatsApp(name: String, number: String, text: String) {
+        var digits = number.filter(Char::isDigit)
+        if (digits.length == 11 && digits.startsWith("0")) digits = digits.drop(1)
+        if (digits.length == 10) digits = "91$digits" // saved without country code: assume India
+        var sent = false
+        WhatsAppSender.arm { main.post { sent = true; reply("Bhej diya, boss. $name ko message chala gaya.") } }
+        say("Okie boss.")
+        val chat = Intent(Intent.ACTION_VIEW, Uri.parse("https://api.whatsapp.com/send?phone=$digits&text=" + Uri.encode(text)))
+            .setPackage("com.whatsapp")
+        if (!launch(chat)) return reply("Boss, WhatsApp phone mein nahi mila.")
+        main.postDelayed({ if (!sent) reply("Boss, message type ho gaya par send nahi hua. NOVA app mein WhatsApp sender on karo.") }, 16_000)
     }
 
     private fun doIt(i: Intent?, doneMsg: String, more: Boolean = true) {
