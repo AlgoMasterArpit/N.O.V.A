@@ -5,6 +5,9 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+// Build outside OneDrive: syncing locks files mid-build and uploads hundreds of MB for nothing.
+System.getenv("LOCALAPPDATA")?.let { layout.buildDirectory.set(File(it, "nova-build")) }
+
 val keys = Properties().apply { rootProject.file("keystore.properties").takeIf { it.exists() }?.inputStream()?.use(::load) }
 
 android {
