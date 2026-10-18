@@ -8,7 +8,9 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.text.InputType
 import android.widget.Button
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -37,6 +39,18 @@ class MainActivity : Activity() {
         btn("2. Allow display over other apps") {
             startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
         }
+        // ponytail: key sits in app-private storage (sandboxed, never backed up); Keystore encryption if that's not enough.
+        val prefs = getSharedPreferences("nova", MODE_PRIVATE)
+        val key = EditText(this).apply {
+            hint = "Paste Claude API key (sk-ant-...)"
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+        }
+        root.addView(key)
+        btn("3. Save Claude key") {
+            prefs.edit().putString(NovaService.CLAUDE_KEY, key.text.toString().trim()).apply()
+            key.text.clear()
+            refresh()
+        }
         btn("WAKE NOVA") {
             if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
                 startForegroundService(Intent(this, NovaService::class.java))
@@ -61,7 +75,9 @@ class MainActivity : Activity() {
             appendLine(if (NovaService.running) "🟢 NOVA is alive" else "⚫ NOVA is killed")
             appendLine(if (missing.isEmpty()) "✅ Permissions OK" else "❌ Missing: " + missing.joinToString { it.substringAfterLast('.') })
             appendLine(if (Settings.canDrawOverlays(this@MainActivity)) "✅ Can open apps" else "❌ Allow display over other apps")
-            appendLine("🔒 NOVA has no internet permission. Nothing leaves this phone through NOVA.")
+            val hasKey = !getSharedPreferences("nova", MODE_PRIVATE).getString(NovaService.CLAUDE_KEY, null).isNullOrBlank()
+            appendLine(if (hasKey) "✅ Claude key saved" else "❌ Add a Claude key to ask questions")
+            appendLine("🔒 Only your questions go online, and only to Claude.")
         }
         notes.text = "Notes:\n" + File(filesDir, "notes.txt").takeIf { it.exists() }?.readText().orEmpty()
     }
