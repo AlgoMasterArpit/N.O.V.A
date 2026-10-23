@@ -306,10 +306,8 @@ class NovaService : Service() {
                 doIt(i, "Calendar khol diya, boss. Bas save daba do.")
             }
             is Cmd.Note -> if (cmd.text.isBlank()) prompt("Kya likhun, boss?") { saveNote(it) } else saveNote(cmd.text)
-            Cmd.ReadNotes -> {
-                val notes = notesFile().takeIf { it.exists() }?.readLines()?.takeLast(5).orEmpty()
-                reply(if (notes.isEmpty()) "Boss, koi note nahi hai." else "Boss, aapke notes: " + notes.joinToString(". ") { it.substringAfter("| ") })
-            }
+            // Write-only by design: notes may hold private stuff, so NOVA never speaks them out loud.
+            Cmd.ReadNotes -> reply("Boss, notes main sirf likhta hun, padhta nahi. NOVA app khol ke khud dekh lo.")
             is Cmd.Quiet -> {
                 quietUntil = System.currentTimeMillis() + cmd.minutes * 60_000L
                 stopWake()
